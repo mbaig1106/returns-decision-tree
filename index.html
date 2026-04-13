@@ -460,7 +460,7 @@ function render() {
       ${node.note?`<div class="q-note">${node.note}</div>`:""}
       <div class="options">
         ${node.opts.map(o=>`
-          <button class="opt-btn" onclick="chooseOpt('${JSON.stringify(o).replace(/'/g,"&#39;")}','${node.id}')">
+          <button class="opt-btn" onclick="chooseOpt('${JSON.stringify(o).replace(/'/g,"&#39;").replace(/"/g,"&quot;")}','${node.id}')">
             <span class="opt-tag ${tagMap[o.tag]||'tag-a'}">${tagLabel[o.tag]||o.tag}</span>
             <span>${o.label}</span>
           </button>`).join("")}
