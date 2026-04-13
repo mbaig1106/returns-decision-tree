@@ -416,8 +416,7 @@ function renderQualBar() {
     return `<span class="qual-item ${cls}">${icon}${c.label}</span>`;
   }).join("");
 }
-function chooseOpt(optJson, nodeId) {
-  const opt = JSON.parse(optJson);
+function chooseOpt(opt, nodeId) {
   if (nodeId === "new_prereq_order") qualStatus.order_api = opt.tag === "yes";
   if (nodeId === "new_prereq_fulfillment") qualStatus.fulfillment_api = opt.tag === "yes";
   if (["new_volume_check","new_volume_check_insights","new_ir_size_check","existing_ir_size_check"].includes(nodeId)) qualStatus.volume = opt.tag !== "no";
@@ -459,14 +458,19 @@ function render() {
       <div class="q-text">${node.q}</div>
       ${node.note?`<div class="q-note">${node.note}</div>`:""}
       <div class="options">
-        ${node.opts.map(o=>`
-          <button class="opt-btn" onclick="chooseOpt('${JSON.stringify(o).replace(/'/g,"&#39;").replace(/"/g,"&quot;")}','${node.id}')">
+        ${node.opts.map((o,i)=>`
+          <button class="opt-btn" data-idx="${i}">
             <span class="opt-tag ${tagMap[o.tag]||'tag-a'}">${tagLabel[o.tag]||o.tag}</span>
             <span>${o.label}</span>
           </button>`).join("")}
       </div>
     </div>
     ${history.length>0?`<div class="actions"><button class="btn-back" onclick="goBack()">&#8592; Back</button></div>`:""}`;
+  content.querySelectorAll('.opt-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      chooseOpt(node.opts[parseInt(this.dataset.idx)], node.id);
+    });
+  });
 }
 function goBack() { if (history.length>0){current=history.pop();render();} }
 function goTo(i) { current=history[i]; history=history.slice(0,i); render(); }
