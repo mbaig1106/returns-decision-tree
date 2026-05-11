@@ -142,257 +142,117 @@ const nodes = {
     q: "What is the merchant's primary pain point with returns?",
     opts: [
       { tag: "a", label: "Return fraud or abuse — empty boxes, wrong items, serial returners, wardrobing", next: "new_volume_check" },
-      { tag: "b", label: "Refund speed — refund good customers faster without more risk", next: "new_ir_size_check" },
+      { tag: "b", label: "Refund speed — refund good customers faster without more risk", next: "new_mcv_check" },
       { tag: "c", label: "Appeasement abuse — false claims of lost/damaged items for store credit", next: "new_appeasements_check" },
-      { tag: "d", label: "Visibility and analytics — understand returns data and patterns better", next: "new_volume_check_insights" }
-    ]
-  },
-  new_volume_check_insights: {
-    id: "new_volume_check_insights", label: "Qualification", stage: "Sizing",
-    q: "How many return requests does the merchant process per month?",
-    note: "Minimum volume is needed for the model to generate meaningful signal and for the dashboard to be useful.",
-    opts: [
-      { tag: "yes", label: "200+ returns per month", next: "recommend_insights" },
-      { tag: "no", label: "Fewer than 200 returns per month", next: "disqualified_low_volume" }
+      { tag: "d", label: "Visibility and analytics — understand returns data and patterns better", next: "new_mcv_check" }
     ]
   },
   new_volume_check: {
     id: "new_volume_check", label: "Qualification", stage: "Sizing",
     q: "How many return requests does the merchant process per month?",
-    note: "Model accuracy improves significantly with volume. Returns Insights is viable at lower volumes than Instant Refunds.",
     opts: [
-      { tag: "a", label: "500+ returns per month", next: "new_fraud_outcomes" },
-      { tag: "b", label: "200–499 returns per month", next: "recommend_insights_low_vol" },
-      { tag: "no", label: "Fewer than 200 returns per month", next: "disqualified_low_volume" }
+      { tag: "yes", label: "10,000+ returns per month", next: "new_fraud_outcomes" },
+      { tag: "no", label: "Fewer than 10,000 returns per month", next: "disqualified_low_volume" }
     ]
   },
   disqualified_low_volume: {
     type: "outcome", style: "disqualified",
-    title: "Not qualified — insufficient return volume",
-    body: "With fewer than 200 returns per month, there is not enough data for the model to generate meaningful decisions or for the Returns Insights dashboard to surface useful patterns. This merchant is not a fit for Intelligent Returns at this time. Revisit when volume grows or if they have a concentrated high-value fraud problem worth investigating manually.",
-    owners: ["AE notes in Salesforce as future pipeline", "CSM monitors for volume growth if existing merchant"],
-    placeholder: "Threshold to validate: confirm 200/mo minimum with Pedro or the pricing doc"
-  },
-  recommend_insights_low_vol: {
-    type: "outcome", style: "insights",
-    title: "Returns Insights — viable at this volume, Instant Refunds not yet",
-    body: "Volume is sufficient for Returns Insights to surface patterns and begin building model signal, but not enough for Instant Refunds to make high-confidence real-time decisions at scale. Start with ideal-state Returns Insights integration. Revisit Instant Refunds when monthly return volume crosses 500+. Frame this to the merchant as a phased approach: insights now, decisions when the data set is richer.",
-    owners: ["SE owns POV design and SDD", "AE owns commercial framing", "CSM owns monitoring and upsell timing"],
-    placeholder: "Threshold to validate: confirm 500/mo as IR minimum with DS"
+    title: "Not eligible — insufficient volume",
+    body: "Below 10,000 returns per month, the merchant does not meet the volume threshold for Intelligent Returns. Eligibility may still be possible if the deal size justifies an exception — review ACV potential with the AE. Otherwise, note in Salesforce as future pipeline and revisit when volume grows.",
+    owners: ["AE reviews ACV potential and deal size", "CSM monitors for volume growth if existing merchant"]
   },
   new_fraud_outcomes: {
     id: "new_fraud_outcomes", label: "POV feasibility", stage: "Discovery",
     q: "Can the merchant provide labeled outcome data — which returns were actually fraudulent or abusive?",
-    note: "Without labels, you can score returns but can't prove model performance. This is the most common POV blocker.",
+    note: "Without labels, you can score returns but cannot prove model performance. This is the most common POV blocker.",
     opts: [
-      { tag: "yes", label: "Yes — they track outcomes (e.g. Loop API, WMS data, CSV from warehouse)", next: "recommend_insights_to_ir" },
-      { tag: "no", label: "No — they don't have labeled fraud outcome data yet", next: "recommend_insights_no_outcomes" }
+      { tag: "yes", label: "Yes — they track outcomes (e.g. Loop API, WMS data, CSV from warehouse)", next: "recommend_instant_ideal" },
+      { tag: "no", label: "No — they don't have labeled fraud outcome data yet", next: "recommend_instant_no_outcomes" }
     ]
   },
-  recommend_insights_to_ir: {
-    type: "outcome", style: "insights",
-    title: "Returns Insights (ideal state) — strong path to Instant Refunds",
-    body: "Merchant has volume and outcome data. Start with Returns Insights at ideal-state integration (Create + Update + Feedback, infoOnly: INFO_ONLY). Once the AR/LR curve proves model accuracy, Product/DS sets thresholds and the flip to Instant Refunds is just changing infoOnly to EVALUATE — minimal additional technical work.",
+  recommend_instant_ideal: {
+    type: "outcome", style: "instant",
+    title: "Ideal candidate for Instant Refunds",
+    body: "Merchant has the volume and labeled outcome data needed for a full POV. Start with Returns Insights at ideal-state integration (Create + Update + Feedback, infoOnly: INFO_ONLY). Once the AR/LR curve proves model accuracy, Product/DS sets thresholds and the flip to Instant Refunds is just changing infoOnly to EVALUATE — minimal additional technical work.",
     owners: ["SE owns POV design + SDD", "AE owns commercial framing", "Product owns threshold setting before IR go-live"]
   },
-  recommend_insights_no_outcomes: {
-    type: "outcome", style: "insights",
-    title: "Returns Insights — offline POV, build toward outcomes",
-    body: "Without labeled outcomes, run an offline POV: merchant sends historical return data via flat file, Signifyd scores it, and merchant validates the high-risk flags against their own knowledge. Define what 'fraud' means for this merchant first. Build getting outcomes flowing automatically (Loop API or CSV) into the POV scope.",
+  recommend_instant_no_outcomes: {
+    type: "outcome", style: "pov",
+    title: "Eligible for recommendation on Instant Refunds only",
+    body: "Merchant has the volume but no labeled outcome data. They can be recommended for Instant Refunds, but the POV will be an offline evaluation: merchant sends historical return data via flat file, Signifyd scores it, and merchant validates high-risk flags. Build getting outcomes flowing automatically (Loop API or CSV) into the POV scope before going live.",
     owners: ["SE owns POV design + ATC submission", "AE owns commercial framing", "Product supports POV evaluation"]
   },
-  new_ir_size_check: {
-    id: "new_ir_size_check", label: "Qualification — Instant Refunds", stage: "Sizing",
-    q: "How many return requests does the merchant process per month?",
-    note: "Instant Refunds requires enough volume for the model to make confident decisions. Below threshold, false positive risk is too high to justify live decisions.",
+  new_mcv_check: {
+    id: "new_mcv_check", label: "MCV qualification", stage: "Sizing",
+    q: "Can the merchant meet the minimum contract value (MCV)?",
+    note: "$12k MCV for Mid Market, $30k MCV for Enterprise+.",
     opts: [
-      { tag: "yes", label: "500+ returns per month", next: "new_ir_gmv_check" },
-      { tag: "no", label: "Fewer than 500 returns per month", next: "ir_volume_too_low" }
+      { tag: "yes", label: "Yes — merchant can meet MCV", next: "recommend_insights_avoid_standalone" },
+      { tag: "no", label: "No — merchant cannot meet MCV", next: "disqualified_no_mcv" }
     ]
   },
-  ir_volume_too_low: {
-    type: "outcome", style: "pov",
-    title: "Too early for Instant Refunds — start with Returns Insights",
-    body: "Instant Refunds requires sufficient volume for the model to make high-confidence real-time decisions. At fewer than 500 returns/month, false positive risk is too high and the ROI story is harder to justify. Start with Returns Insights to build model signal and prove value. Set a specific trigger: 'when you hit 500 returns/month, we revisit Instant Refunds together.'",
-    owners: ["SE owns Returns Insights POV scoping", "CSM owns the Instant Refunds upsell trigger conversation"],
-    placeholder: "Threshold to validate: confirm 500/mo minimum with DS"
-  },
-  new_ir_gmv_check: {
-    id: "new_ir_gmv_check", label: "Qualification — Instant Refunds", stage: "Sizing",
-    q: "What is the merchant's estimated annual returns GMV (total value of returns processed per year)?",
-    note: "Instant Refunds requires Product/DS investment in threshold setting and ongoing model monitoring. The deal size needs to justify that resource commitment.",
-    opts: [
-      { tag: "yes", label: "$2M+ in annual returns GMV", next: "new_ir_fraud_signal" },
-      { tag: "no", label: "Under $2M in annual returns GMV", next: "ir_gmv_too_low" }
-    ]
-  },
-  ir_gmv_too_low: {
-    type: "outcome", style: "pov",
-    title: "Below Instant Refunds GMV threshold — Returns Insights is the fit",
-    body: "Below $2M in annual returns GMV, the economics don't justify the Product/DS investment in threshold setting and ongoing monitoring. Returns Insights is the right product at this size. Revisit Instant Refunds if the merchant's returns volume grows.",
-    owners: ["AE frames around Returns Insights value", "SE scopes Returns Insights integration"],
-    placeholder: "Threshold to validate: confirm $2M GMV minimum with pricing doc and Pedro"
-  },
-  new_ir_fraud_signal: {
-    id: "new_ir_fraud_signal", label: "Qualification — Instant Refunds", stage: "Discovery",
-    q: "Does the merchant believe they have a meaningful return fraud or abuse problem?",
-    note: "Without fraud signal, there's no ROI story. A merchant with near-zero fraud has no case for the investment.",
-    opts: [
-      { tag: "yes", label: "Yes — they suspect or have evidence of return fraud/abuse", next: "new_instant_readiness" },
-      { tag: "no", label: "No — they believe their return fraud rate is very low", next: "ir_no_fraud_signal" }
-    ]
-  },
-  ir_no_fraud_signal: {
+  recommend_insights_avoid_standalone: {
     type: "outcome", style: "insights",
-    title: "Returns Insights first — validate whether fraud exists",
-    body: "Without fraud signal, the Instant Refunds ROI story doesn't land. Use Returns Insights to first validate whether fraud is actually occurring — merchants are often surprised by what the model surfaces. If Insights reveals meaningful fraud patterns, that becomes the evidence base to upsell to Instant Refunds.",
-    owners: ["SE owns Returns Insights POV framing", "CSM owns the upsell conversation post-Insights"]
+    title: "Eligible for Return Insights — avoid selling standalone",
+    body: "Merchant meets MCV and has a clear need for Returns Insights. Start with ideal-state integration (Create + Update + Feedback, infoOnly: INFO_ONLY). Provision the Returns Insights dashboard at go-live. Important: avoid positioning Returns Insights as a standalone product — frame it as a foundation that also enables Instant Refunds once volume and fraud signal are established.",
+    owners: ["SE owns POV design + SDD", "AE owns commercial framing — do not sell standalone", "CSM owns post-live monitoring and upsell path"]
   },
-  new_instant_readiness: {
-    id: "new_instant_readiness", label: "Technical readiness", stage: "Instant Refunds fit",
-    q: "Can the merchant's system act on a real-time decision at the moment of the return request?",
-    note: "Instant Refunds requires the merchant to programmatically accept, hold, or reject a refund based on Signifyd's live checkpointAction response.",
-    opts: [
-      { tag: "yes", label: "Yes — their return portal can receive and act on a decision in real time", next: "new_instant_portal" },
-      { tag: "no", label: "No — returns always route to CS, no programmatic flow exists", next: "recommend_insights_first" }
-    ]
-  },
-  recommend_insights_first: {
-    type: "outcome", style: "insights",
-    title: "Returns Insights first — merchant not operationally ready for Instant Refunds",
-    body: "Merchant has the size and fraud signal, but their operational flow is too manual to act on real-time decisions. Start with Returns Insights. Use the insights phase to help the merchant build toward a programmatic decision workflow. Set a specific milestone: 'once you have a return portal that can act on a decision, we flip the switch.'",
-    owners: ["SE owns Returns Insights POV", "CSM owns Instant Refunds milestone conversation"]
-  },
-  new_instant_portal: {
-    id: "new_instant_portal", label: "Integration approach", stage: "Instant Refunds fit",
-    q: "What return portal or system does the merchant use?",
-    opts: [
-      { tag: "a", label: "Shopify + Loop (or another Shopify return app)", next: "recommend_instant_shopify" },
-      { tag: "b", label: "Custom API / non-Shopify platform", next: "recommend_instant_api" },
-      { tag: "c", label: "Not sure / still evaluating a return portal", next: "ir_no_portal" }
-    ]
-  },
-  ir_no_portal: {
-    type: "outcome", style: "pov",
-    title: "Pause — return portal decision needed first",
-    body: "Instant Refunds requires a return portal that can receive and act on Signifyd's decision. Without a portal in place, the integration can't be scoped. Help the merchant evaluate portal options — Loop is the most common for Shopify merchants. Once they've selected a portal, return to this tree to scope the integration approach.",
-    owners: ["SE documents in SDD as a blocker", "AE notes dependency in Salesforce"]
-  },
-  recommend_instant_shopify: {
-    type: "outcome", style: "instant",
-    title: "Instant Refunds — Shopify + Loop via Shopify Flow",
-    body: "Use Shopify Flow (no-code) to wait for Signifyd's risk tag on the return, then call Loop's API to flag high-risk returns for manual processing while issuing instant refunds for low-risk ones. No custom code, no ongoing maintenance. Figs is the reference merchant. Product/DS must set thresholds and get merchant sign-off before flipping infoOnly to EVALUATE.",
-    owners: ["SE owns SDD + disposition handling guide", "IM owns integration", "Product owns threshold setting — hard gate before go-live"]
-  },
-  recommend_instant_api: {
-    type: "outcome", style: "instant",
-    title: "Instant Refunds — full API integration",
-    body: "Scope the full three-endpoint integration (CreatePostSaleRequestedAction, UpdatePostSaleAction, SubmitPostSaleActionFeedback) with infoOnly: EVALUATE. Define what ACCEPT/REJECT/HOLD means operationally for each return type before go-live. Product/DS produces an AR/LR threshold table — merchant must sign off on expected rejection rates. Note: REJECT means 'hold refund until warehouse verifies,' not 'deny customer permanently.'",
-    owners: ["SE owns SDD + disposition handling guide", "IM owns API integration", "Product owns threshold setting — hard gate before go-live"]
+  disqualified_no_mcv: {
+    type: "outcome", style: "disqualified",
+    title: "Not eligible for Return Insights",
+    body: "Merchant cannot meet the minimum contract value for their segment ($12k for Mid Market, $30k for Enterprise+). Returns Insights is not a fit at this deal size. Note in Salesforce and revisit if their contract value potential grows or if they qualify under a different segment.",
+    owners: ["AE notes in Salesforce", "CSM monitors for upsell opportunity at renewal"]
   },
   new_appeasements_check: {
     id: "new_appeasements_check", label: "Qualification — Selective Appeasements", stage: "Sizing",
-    q: "Does the merchant process 200+ appeasements per month AND have labeled outcome data on which were fraudulent?",
-    note: "Appeasements training data is sparse — volume and labeled outcomes are both required. The appeasements V1 model is still in development as of early 2026.",
+    q: "How many appeasements does the merchant process per month?",
+    note: "No outcome data required for initial qualification. Volume is the primary gate.",
     opts: [
-      { tag: "yes", label: "Yes — 200+ appeasements/month with labeled outcome data", next: "recommend_appeasements" },
-      { tag: "no", label: "No — under 200/month or no labeled outcome data", next: "appeasements_not_ready" }
+      { tag: "yes", label: "More than 10,000 appeasements per month", next: "recommend_appeasements_standalone" },
+      { tag: "no", label: "Fewer than 10,000 appeasements per month", next: "recommend_appeasements_with_ir" }
     ]
   },
-  recommend_appeasements: {
+  recommend_appeasements_standalone: {
     type: "outcome", style: "appeasements",
-    title: "Selective Appeasements — proceed to POV scoping",
-    body: "Merchant has the volume and data needed. Scope an offline POV: send historical appeasement data (ITEM_NOT_RECEIVED, LOST, ITEM_DAMAGED reason codes) with outcome labels. Validate AUC before going live. Thresholds should be more conservative than returns — a false positive here is high-stakes. HOLD for manual review is especially important. Lenovo is the reference merchant.",
+    title: "Eligible for Selective Appeasements — standalone",
+    body: "Merchant has sufficient appeasement volume to support a standalone Selective Appeasements product. Scope an offline POV with historical appeasement data (ITEM_NOT_RECEIVED, LOST, ITEM_DAMAGED reason codes). Validate AUC before going live. Thresholds should be more conservative than returns — a false positive here is high-stakes. HOLD for manual review is especially important. Lenovo is the reference merchant.",
     owners: ["SE owns POV design + ATC submission", "Product supports evaluation and owns threshold setting", "AE owns deal framing"]
   },
-  appeasements_not_ready: {
-    type: "outcome", style: "disqualified",
-    title: "Not ready for Selective Appeasements",
-    body: "Without 200+ monthly appeasements and labeled outcome data, it's not possible to train or validate a model for this merchant. Help the merchant build a process to track outcomes. Returns Insights can capture appeasement events in the meantime. Revisit Selective Appeasements once the data foundation exists.",
-    owners: ["SE notes in SDD as future scope", "CSM tracks as expansion opportunity at renewal"],
-    placeholder: "Volume threshold to validate with DS — 200/mo is a directional minimum"
+  recommend_appeasements_with_ir: {
+    type: "outcome", style: "appeasements",
+    title: "Eligible for Selective Appeasements — paired with Instant Refunds",
+    body: "Volume is below the standalone threshold but the merchant is still eligible for Selective Appeasements when paired with Instant Refunds. Scope the combined product conversation. Ensure the merchant also qualifies for Instant Refunds (10,000+ returns/month, meeting MCV) before proceeding with this bundle approach.",
+    owners: ["AE owns combined product framing", "SE scopes bundled integration", "Product supports evaluation"]
   },
   existing_state: {
     id: "existing_state", label: "Current state", stage: "Context",
     q: "Is this merchant already using any Intelligent Returns product?",
     opts: [
       { tag: "a", label: "No — returns is net new for them", next: "new_prereq_order" },
-      { tag: "b", label: "Yes — on Returns Insights, considering Instant Refunds", next: "existing_insights_tier" },
-      { tag: "c", label: "Yes — on Instant Refunds, considering Selective Appeasements", next: "existing_ir_to_appeasements" },
+      { tag: "b", label: "Yes — on Returns Insights, considering Instant Refunds", next: "new_pain_point" },
+      { tag: "c", label: "Yes — on Instant Refunds, considering Selective Appeasements", next: "new_appeasements_check" },
       { tag: "d", label: "Yes — renewal coming up", next: "existing_renewal" }
-    ]
-  },
-  existing_insights_tier: {
-    id: "existing_insights_tier", label: "Integration tier check", stage: "Upsell readiness",
-    q: "What integration tier is the merchant on?",
-    opts: [
-      { tag: "a", label: "Ideal state — Create + Update + Feedback all integrated", next: "existing_ir_size_check" },
-      { tag: "b", label: "2nd best or MVP tier — missing some endpoints", next: "existing_upgrade_first" }
-    ]
-  },
-  existing_upgrade_first: {
-    type: "outcome", style: "pov",
-    title: "Upgrade integration tier before Instant Refunds",
-    body: "Merchant must reach ideal-state integration before Instant Refunds is possible. IM scopes the upgrade (adding missing endpoints). Once upgraded, re-enter this flow. CSM frames the upgrade as a short project with a clear payoff: full ideal-state integration makes the flip to Instant Refunds essentially free.",
-    owners: ["IM owns integration upgrade", "CSM owns merchant conversation", "Product plans threshold setting for after upgrade"]
-  },
-  existing_ir_size_check: {
-    id: "existing_ir_size_check", label: "Qualification — Instant Refunds", stage: "Sizing",
-    q: "Does the merchant meet both Instant Refunds thresholds?",
-    note: "500+ returns/month AND $2M+ annual returns GMV required even for existing merchants on ideal-state integration.",
-    opts: [
-      { tag: "yes", label: "Yes — 500+ returns/month AND $2M+ annual returns GMV", next: "existing_ir_fraud_check" },
-      { tag: "no", label: "No — below one or both thresholds", next: "ir_volume_too_low" }
-    ]
-  },
-  existing_ir_fraud_check: {
-    id: "existing_ir_fraud_check", label: "Qualification — Instant Refunds", stage: "Discovery",
-    q: "Has the Returns Insights phase surfaced meaningful fraud or abuse patterns?",
-    note: "Insights phase performance data is the strongest possible evidence for the Instant Refunds upsell — use it.",
-    opts: [
-      { tag: "yes", label: "Yes — dashboard shows fraud patterns or merchant has flagged abuse", next: "existing_ir_ready" },
-      { tag: "no", label: "No — fraud rate appears very low from Insights data", next: "ir_no_fraud_signal" }
-    ]
-  },
-  existing_ir_ready: {
-    type: "outcome", style: "instant",
-    title: "Instant Refunds upsell — minimal lift, strong evidence",
-    body: "Merchant is on ideal-state integration and has fraud signal from the Insights phase. The technical lift is just flipping infoOnly from INFO_ONLY to EVALUATE. CSM leads with the specific fraud value already proven during Insights. Product/DS sets final thresholds and gets merchant sign-off. This is the cleanest upsell motion in the portfolio.",
-    owners: ["CSM owns upsell conversation", "SE confirms technical readiness", "Product owns threshold setting — required before go-live"]
-  },
-  existing_ir_to_appeasements: {
-    id: "existing_ir_to_appeasements", label: "Selective Appeasements feasibility", stage: "Discovery",
-    q: "Does the merchant track and can they share labeled appeasement outcome data?",
-    opts: [
-      { tag: "yes", label: "Yes — labeled data exists on fraudulent appeasements", next: "recommend_appeasements" },
-      { tag: "no", label: "No — they don't track appeasement fraud outcomes", next: "appeasements_not_ready" }
     ]
   },
   existing_renewal: {
     id: "existing_renewal", label: "Renewal check", stage: "Renewal",
-    q: "What is the merchant's current integration tier?",
+    q: "What API version is the merchant on?",
     opts: [
-      { tag: "a", label: "Ideal state — Create + Update + Feedback", next: "renewal_ideal" },
-      { tag: "b", label: "2nd best or MVP tier", next: "renewal_upgrade" }
+      { tag: "a", label: "Old API", next: "renewal_old_api" },
+      { tag: "b", label: "New API", next: "renewal_new_api" }
     ]
   },
-  renewal_ideal: {
-    type: "outcome", style: "insights",
-    title: "Renewal — strong position",
-    body: "Merchant is on ideal-state integration. Renewal prep: compile AR, fraud rate by decision bucket, blocked fraud value, and refund speed improvement. Product provides model version updates and roadmap context. If still on Returns Insights only and now meeting the volume/GMV thresholds, renewal is the natural trigger for the Instant Refunds upsell conversation.",
-    owners: ["CSM leads renewal prep", "AE owns commercial negotiation", "Product provides model updates + roadmap context"]
-  },
-  renewal_upgrade: {
+  renewal_old_api: {
     type: "outcome", style: "pov",
-    title: "Renewal — use as forcing function to upgrade tier",
-    body: "A merchant below ideal-state is getting minimal value and is churn risk. Renewal is the moment to negotiate the upgrade as a contract condition. IM scopes the technical work. CSM frames: 'upgrading your integration unlocks the full value you're paying for.' First check — MVP tier (RecordPostSaleAction only) requires more significant upgrade work.",
+    title: "Use renewal to upgrade to new APIs",
+    body: "Renewal is the right moment to negotiate the API upgrade as a contract condition. IM scopes the technical work. AE frames the upgrade as unlocking full product value — merchants on the old API are not benefiting from recent model improvements. CSM leads the merchant conversation and sets a clear upgrade timeline.",
     owners: ["AE frames upgrade in contract terms", "CSM owns merchant conversation", "IM scopes integration upgrade"]
   },
-  recommend_insights: {
+  renewal_new_api: {
     type: "outcome", style: "insights",
-    title: "Returns Insights — analytics and risk visibility",
-    body: "Good fit for a merchant seeking to understand their returns landscape. Start with ideal-state integration (Create + Update + Feedback, infoOnly: INFO_ONLY). Provision the Returns Insights dashboard at go-live. Focus the value story on surfacing patterns they couldn't see before. Foundation for a future Instant Refunds upsell.",
-    owners: ["SE owns POV design + SDD", "IM owns integration", "CSM owns post-live monitoring and upsell path"]
+    title: "No API action needed — commercial conversation only",
+    body: "Merchant is on the new API. No product requirement for this renewal. Focus the conversation on volume and pricing — review GMV growth, fraud rate trends, and whether they now qualify for additional products (Instant Refunds or Appeasements). This is a purely commercial renewal.",
+    owners: ["AE owns commercial negotiation", "CSM leads renewal prep", "Product provides model updates + roadmap context"]
   }
 };
 let history = [], current = "start";
@@ -401,10 +261,8 @@ function renderQualBar() {
   const checks = [
     { key: "order_api", label: "Order API" },
     { key: "fulfillment_api", label: "Fulfillment API" },
-    { key: "volume", label: "Volume" },
-    { key: "gmv", label: "Returns GMV" },
-    { key: "fraud_signal", label: "Fraud signal" },
-    { key: "portal", label: "Return portal" }
+    { key: "volume", label: "Volume (10k+)" },
+    { key: "mcv", label: "MCV" }
   ];
   const bar = document.getElementById("qual-bar");
   const visible = checks.filter(c => qualStatus[c.key] !== undefined);
@@ -419,10 +277,8 @@ function renderQualBar() {
 function chooseOpt(opt, nodeId) {
   if (nodeId === "new_prereq_order") qualStatus.order_api = opt.tag === "yes";
   if (nodeId === "new_prereq_fulfillment") qualStatus.fulfillment_api = opt.tag === "yes";
-  if (["new_volume_check","new_volume_check_insights","new_ir_size_check","existing_ir_size_check"].includes(nodeId)) qualStatus.volume = opt.tag !== "no";
-  if (nodeId === "new_ir_gmv_check") qualStatus.gmv = opt.tag === "yes";
-  if (["new_ir_fraud_signal","existing_ir_fraud_check"].includes(nodeId)) qualStatus.fraud_signal = opt.tag === "yes";
-  if (nodeId === "new_instant_portal") qualStatus.portal = opt.tag !== "c";
+  if (nodeId === "new_volume_check") qualStatus.volume = opt.tag === "yes";
+  if (nodeId === "new_mcv_check") qualStatus.mcv = opt.tag === "yes";
   history.push(current);
   current = opt.next;
   render();
