@@ -142,7 +142,7 @@ const nodes = {
     q: "What is the merchant's primary pain point with returns?",
     opts: [
       { tag: "a", label: "Return fraud or abuse — empty boxes, wrong items, serial returners, wardrobing", next: "new_volume_check" },
-      { tag: "b", label: "Refund speed — refund good customers faster without more risk", next: "new_mcv_check" },
+      { tag: "b", label: "Refund speed — refund good customers faster without more risk", next: "new_volume_check" },
       { tag: "c", label: "Appeasement abuse — false claims of lost/damaged items for store credit", next: "new_appeasements_check" },
       { tag: "d", label: "Visibility and analytics — understand returns data and patterns better", next: "new_mcv_check" }
     ]
@@ -158,8 +158,8 @@ const nodes = {
   disqualified_low_volume: {
     type: "outcome", style: "disqualified",
     title: "Not eligible — insufficient volume",
-    body: "Below 10,000 returns per month, the merchant does not meet the volume threshold for Intelligent Returns. Eligibility may still be possible if the deal size justifies an exception — review ACV potential with the AE. Otherwise, note in Salesforce as future pipeline and revisit when volume grows.",
-    owners: ["AE reviews ACV potential and deal size", "CSM monitors for volume growth if existing merchant"]
+    body: "Below 10,000 returns per month, the merchant does not meet the volume threshold for Intelligent Returns. However, if the merchant can meet the minimum contract value (MCV) for their market segment, they may still be considered for recommendations. Review ACV potential with the AE — if deal size justifies the investment, escalate for a custom evaluation. Otherwise, note in Salesforce as future pipeline and revisit when volume grows.",
+    owners: ["AE reviews MCV potential by market segment", "CSM monitors for volume growth if existing merchant"]
   },
   new_fraud_outcomes: {
     id: "new_fraud_outcomes", label: "POV feasibility", stage: "Discovery",
